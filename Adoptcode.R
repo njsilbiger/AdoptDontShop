@@ -7,6 +7,8 @@ library(magick)
 library(patchwork)
 library(cowplot)
 library(ggsci)
+library(ggwordcloud)
+library(RCurl)
 
 ### Use the adopt a pet website for los angeles
 startUrl<-"https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california"
@@ -126,3 +128,23 @@ p4<-ggdraw() +
   ggsave("Catoutput.png", width = 14, height = 10)
 
   write.csv(catdata, file = 'catdata.csv')
+  
+  ### Make a wordcloud with the name data
+  img<-"https://toppng.com/uploads/preview/cat-silhouette-1154945485050bazz8zvk.png"
+  
+  set.seed(42)
+  catdata %>%
+    select(Name)%>%
+    group_by(Name) %>%
+    summarize(N = n()) %>%
+    mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)))%>%
+    ggplot(aes(label = Name, size = N, angle = angle)) +
+    geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
+                             rm_outside = FALSE, 
+                             area_corr = TRUE) +
+    scale_size_area(max_size = 5) +
+    theme_minimal()+
+    ggsave("Catcloud.png", height = 6, width = 6)
+  
+  
+  

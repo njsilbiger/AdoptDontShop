@@ -41,6 +41,9 @@ b$Sex<-trimws(b$Sex)
 b$Breed<-trimws(b$Breed)
 b$Age<-trimws(b$Age)
 
+#reorder youngese to oldest
+b$Age<-factor(c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior"))
+
 ## Get the cat pictures
 pics<-webpage %>%
  html_nodes("img") %>% 

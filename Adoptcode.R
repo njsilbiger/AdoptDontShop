@@ -5,6 +5,8 @@ library(stringr)
 library(glue)
 library(magick)
 library(patchwork)
+library(cowplot)
+library(ggsci)
 
 ### Use the adopt a pet website
 startUrl<-"https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california"
@@ -43,7 +45,7 @@ pics<-webpage %>%
  html_nodes("img") %>% 
   map(xml_attrs) %>% 
   map_df(~as.list(.))%>%
-  slice(-c(1:6)) %>%
+  slice(-c(nrow(.)-20:nrow(.))) %>%
   select(src)
 
 b<-bind_cols(b,pics)
@@ -51,58 +53,33 @@ return(b)
 }
 
 # extract the cat data
-catdata <- c(1:8) %>% # how many pages of data to look through
+catdata <- c(1:11) %>% # how many pages of data to look through
   map_dfr(getCats)
 # something is wrong on page 9
 
 ## Make some plots
 # Cats by breed
 p1<-catdata %>%
-  count(Breed)%>% # count the data
   filter(Breed !="")%>%
-  drop_na()%>%
-  droplevels()%>%
-  ggplot()+
-  geom_bar(aes(x = reorder(Breed,desc(n)),y = n), stat = "identity", fill = "lightblue")+
+  count(Breed, Age, Sex)%>%
+  mutate(n = as.numeric(n))%>%
+  ggplot(aes(x = reorder(Breed, desc(n)), y = n,  fill = Age))+
+  geom_col()+
   xlab('')+
   ylab("Number of Cats")+
-  ggtitle("Number of cats by breed in Los Angeles")+
-  labs(subtitle = "and a rogue dog...")+
+  ggtitle("Cats up for adoption")+
+  scale_fill_uchicago()+
   theme_classic()+
-  theme(axis.text.x = element_text(angle = 90, size = 14),
-        axis.title = element_text(size = 16),
-        title = element_text(size = 20))
-#Cats by sex
-p2<-catdata %>%
-  count(Sex)%>% # count the data
-  filter(Sex !="")%>%
-  drop_na()%>%
-  droplevels()%>%
-  ggplot()+
-  geom_bar(aes(x = reorder(Sex,desc(n)),y = n), stat = "identity", fill = "dodgerblue")+
-  xlab('')+
-  ylab("Number of Cats")+
-  ggtitle("Number of cats by sex in Los Angeles")+
-  theme_classic()+
-  theme(axis.text.x = element_text(angle = 90, size = 14),
-        axis.title = element_text(size = 16),
-        title = element_text(size = 20))
+  theme(axis.text.x = element_text(angle = 90, size = 10),
+        axis.title = element_text(size = 14),
+        plot.title = element_text(size = 16, hjust = 0.5),
+        #legend.position = "none",
+        panel.grid = element_blank(),
+        #plot.caption = element_text(hjust = 0.5, size = 16, vjust = 10),
+        legend.title = element_blank()
+        ) +
+  facet_wrap(~Sex, nrow = 2)
 
-#Cats by age
-p3<-catdata %>%
-  count(Age)%>% # count the data
-  filter(Age !="")%>%
-  drop_na()%>%
-  droplevels()%>%
-  ggplot()+
-  geom_bar(aes(x = reorder(Age,desc(n)),y = n), stat = "identity", fill = "blue")+
-  xlab('')+
-  ylab("Number of Cats")+
-  ggtitle("Number of cats by sex in Los Angeles")+
-  theme_classic()+
-  theme(axis.text.x = element_text(angle = 90, size = 14),
-        axis.title = element_text(size = 16),
-        title = element_text(size = 20))
 
 ## Pick a random cat
 catnum<-sample(nrow(catdata),1,replace=T)
@@ -118,12 +95,17 @@ cat.info<-glue('My name is {Name}.\n I am a {Sex} {Breed} ({Age}).\n You can ado
 # put a cat on it
 p4<-ggdraw() +
   draw_image(as.character(catdata$src[catnum]))+
-  ggtitle('Random adoptable cat in Los Angeles')+
-  labs(caption = cat.info)+
+  ggtitle('Random adoptable cat')+
+  labs(subtitle  = cat.info)+
   theme_minimal()+
-  theme(title = element_text(size = 20),
+  theme(plot.title = element_text(size = 16, hjust = 0.5),
+        plot.subtitle = element_text(size = 16, hjust = 0.5),
         axis.text = element_blank(),
+        axis.title.x = element_text(vjust = 10),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
-  
-(p1+p2)/(p3 +p4) +ggsave("Catoutput.png", width = 14, height = 10)
+
+  p1 +p4+
+  plot_annotation(title = paste("There are",nrow(catdata), "adoptable cats in Los Angeles."))+ 
+  theme(plot.title = element_text(size = 20))+
+  ggsave("Catoutput.png", width = 14, height = 10)

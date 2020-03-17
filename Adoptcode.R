@@ -50,9 +50,13 @@ pics<-webpage %>%
   #slice(-c(nrow(.)-20:nrow(.))) %>%
   select(src)
 
-b<-merge(b,pics)
+# add empty rows of NAs to pics if there is a missing picture
+# This will cause some of the pictures to mis match... there is no easy way to join correctly.. :(
+if(nrow(b) != nrow(pics)){
+  pics[nrow(pics)+(nrow(b)-nrow(pics)),] <- NA
+}
 
-#b<-bind_cols(b,pics)
+b<-bind_cols(b,pics)
 return(b)
 }
 
@@ -76,10 +80,11 @@ p1<-catdata %>%
   theme_classic()+
   theme(axis.text.x = element_text(angle = 90, size = 10, vjust = 0.5, hjust = 1),
         axis.title = element_text(size = 14),
-        plot.title = element_text(size = 16, hjust = 0.5),
+        plot.title = element_text(size = 20, hjust = 0.5),
         panel.grid = element_blank(),
         legend.title = element_blank(),
-        strip.background = element_blank()
+        strip.background = element_blank(),
+        strip.text = element_text(size = 14)
         
        # plot.background = element_rect(fill = "cornsilk", color = NA)
         ) +
@@ -116,3 +121,5 @@ p4<-ggdraw() +
   plot_annotation(title = paste("There are",nrow(catdata), "adoptable cats in Los Angeles."))+ 
   theme(plot.title = element_text(size = 20))+
   ggsave("Catoutput.png", width = 14, height = 10)
+
+  write.csv(catdata, file = 'catdata.csv')

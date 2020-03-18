@@ -32,4 +32,5 @@ disney<-webpage %>%
    filter(num.char>1) %>% # remove the letter of the alphabet
    select(Character)
 
-  
+ write.csv(HP, 'HarryPotter.csv') 
+ 

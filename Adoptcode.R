@@ -92,15 +92,27 @@ p1<-catdata %>%
   xlab('')+
   ylab("Number of Cats")+
   ggtitle("Cats up for adoption")+
-  scale_fill_uchicago()+
+  labs(subtitle = "<span style = 'color:#FF410DFF;'>Kittens</span>,<span style = 'color:#6EE2FFFF;'> young cats</span>, <span style = 'color:#F7C530FF;'>adults</span>, <span style = 'color:#95CC5EFF;'>seniors</span>")+
+ # scale_fill_uchicago()+
+  scale_fill_tron()+
   theme_classic()+
   theme(axis.text.x = element_text(angle = 90, size = 10, vjust = 0.5, hjust = 1),
         axis.title = element_text(size = 14),
-        plot.title = element_text(size = 20, hjust = 0.5),
+        plot.title = element_text(size = 20, hjust = 0.5, colour = "white"),
+        plot.subtitle = element_markdown(hjust = 0.5, size = 16),
         panel.grid = element_blank(),
         legend.title = element_blank(),
         strip.background = element_blank(),
-        strip.text = element_text(size = 14)
+        strip.text = element_text(size = 14, colour = "white"),
+        panel.background = element_rect(fill = "#2B3E50", colour = "white",
+                                        size = 2, linetype = "solid"),
+        plot.background = element_rect(fill = "#4E5D6C"),
+      #  legend.key = element_rect(fill = "#4E5D6C"),
+        legend.position = "none",
+        text = element_text(colour = 'white'),
+        axis.text = element_text(colour = 'white'),
+        axis.ticks = element_line(colour = 'white')
+        
         
        # plot.background = element_rect(fill = "cornsilk", color = NA)
         ) +
@@ -125,18 +137,23 @@ p4<-ggdraw() +
   ggtitle('Random adoptable cat')+
   labs(subtitle  = cat.info)+
   theme_minimal()+
-  theme(plot.title = element_text(size = 16, hjust = 0.5),
+  theme(plot.title = element_markdown(size = 16, hjust = 0.5),
         plot.subtitle = element_text(size = 16, hjust = 0.5),
         axis.text = element_blank(),
         axis.title.x = element_text(vjust = 10),
         panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())
+        panel.grid.minor = element_blank(),
+        
+        panel.background = element_rect(fill = "#4E5D6C", color = NA),
+        plot.background = element_rect(fill = "#4E5D6C", color = NA),
+        text = element_text(colour = 'white')
+          )#2B3E50
 
 # pull the plot together
   p1 +p4+
-  plot_annotation(title = paste("There are",nrow(catdata), "adoptable cats in Los Angeles."))+ 
-  theme(plot.title = element_text(size = 20))+
-  ggsave("Catoutput.png", width = 14, height = 10)
+  plot_annotation(title = paste("There are",nrow(catdata), "adoptable cats in Los Angeles."),
+                  theme = theme(plot.title = element_text(size = 20)))+ 
+    ggsave("Catoutput.png", width = 14, height = 10)
 
   write.csv(catdata, file = 'catdata.csv')
   

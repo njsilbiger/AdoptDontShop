@@ -14,6 +14,10 @@ library(RCurl)
 library(NutrienTrackeR)
 library(fuzzyjoin)
 library(ggtext)
+library(sparkline)
+library(timevis)
+library(DT)
+library(shinycssloaders)
 
 # Load stuff here ---------------------------------------------------------
 ### Use the adopt a pet website for los angeles
@@ -22,7 +26,7 @@ startUrl<-"https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-ange
 # make a function to pull out all the data from the website and make a datafram
 getCats<-function(i) {
   cat(i, "\n")
-  url <- str_c(startUrl, "?page=", i)
+  url <- str_c(startUrl,"?page=", i)
   
   # pull in the URL
   webpage <- read_html(url)
@@ -48,9 +52,6 @@ getCats<-function(i) {
   b$Sex<-trimws(b$Sex)
   b$Breed<-trimws(b$Breed)
   b$Age<-trimws(b$Age)
-  
-  #reorder youngese to oldest
-  b$Age<-factor(c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior"))
   
   ## Get the cat pictures
   pics<-webpage %>%
@@ -80,7 +81,9 @@ getCats_noerror <- possibly(getCats, otherwise = p)
 # extract the cat data
 catdata <- c(1:11) %>% # how many pages of data to look through
   map_dfr(getCats_noerror)%>% # stack the data on top of each other
-  drop_na(Breed)
+  drop_na(Breed)%>%
+  #reorder youngest to oldest
+  mutate(Age=factor(Age, c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior")))
 
 ## for the word cloud
 ## extract Disney Characters
@@ -143,22 +146,69 @@ catdata2 <- catdata %>%
 # Cat sillhouette 
 img<-"https://toppng.com/uploads/preview/cat-silhouette-1154945485050bazz8zvk.png"
 
+## cat cloud
+p3<- catdata2 %>%
+  select(Name, colorgroup)%>%
+  group_by(Name, colorgroup) %>%
+  summarize(N = n()) %>%
+  mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)))%>%
+  ungroup()%>%
+  ggplot(aes(label = Name, size = N, angle = angle, color = colorgroup)) +
+  geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
+                           rm_outside = FALSE, 
+                           area_corr = TRUE) +
+  scale_size_area(max_size = 6) +
+  theme_minimal()+
+  ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
+  labs(subtitle = "Size of names proportional to frequency")+
+  theme(
+    plot.title = element_markdown(lineheight = 1.1, size = 20, hjust = 0.5),
+    plot.subtitle = element_markdown(hjust = 0.5, size  = 16),
+    panel.background = element_rect(fill = "#2B3E50", colour = "white",
+                                    size = 2, linetype = "solid"),
+    panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                    colour = "#2B3E50"), 
+    panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                    colour = "#2B3E50"),
+    plot.background = element_rect(fill = "#4E5D6C"),
+    text = element_text(colour = 'white'),
+    axis.text = element_text(colour = 'white'),
+    axis.ticks = element_line(colour = 'white'))
 
 # ui ----------------------------------------------------------------------
 ui <- fluidPage(theme = shinytheme("superhero"),
 
     # Application title
-    titlePanel(""),
-   
-      mainPanel(h1("Adopt, Don't Shop", align = "center"),
-                   h6("Real time data of adoptable cats in Los Angeles", align = "center"),
-                   h6(align = "center", "All data from", tags$a(href="https://adoptapet.com/", "adoptapet.com"),
-                   h6("Shiny app by Nyssa Silbiger and Megsie Siple", align = "center")
-                   ),
+    titlePanel("Adopt Don't Shop"),
+    sidebarLayout(
+      sidebarPanel(width = 3,
+                   hr(), # horizontal line for visual separation
+                   h6("Real time data of adoptable cats at the Los Angeles Kitten Rescue", align = "center"),
+                   h6(align = "center", "All data from", tags$a(href="https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california", "adoptapet.com")),
+                      
+                   div( actionButton("go", "Show me da kitties!", icon("heart", lib = "glyphicon","fa-2x"),
+                                style="color: #fff; background-color: #f46d43; border-color: #f46d43", align = "center"), style="text-align: center;"),
+                   
+                   # display relevent pet information ####
+                   br(), br(),
+                   hr(), 
+                   div(img(src = "https://pbs.twimg.com/media/DaETc1IVMAA_ckr?format=jpg&name=large", height = "200px"), style="text-align: center;"),
+                   #img(src = "https://pbs.twimg.com/media/DaETc1IVMAA_ckr?format=jpg&name=large", height = "150px", align = "center"),
+                  # br(), br(),
+                  # hr(), # horizontal line for visual separation
+                   # flare #### 
+                   br(), br(),
+                   h5("Built with",
+                      img(src = "https://www.rstudio.com/wp-content/uploads/2014/04/shiny.png", height = "30px"),
+                      "by",
+                      img(src = "https://www.rstudio.com/wp-content/uploads/2014/07/RStudio-Logo-Blue-Gray.png", height = "30px"),
+                      "."),
+                   h6("Made by Nyssa Silbiger and Megsie Siple")
+      ) ,
       
-      actionButton("go", "Show me da kitties!", icon("heart", lib = "glyphicon","fa-2x"),
-                              style="color: #fff; background-color: #f46d43; border-color: #f46d43", align = "center"),
-        h1(" "),         
+      mainPanel(with = 10,
+      
+           #h1(" "),         
             tabsetPanel(
                 tabPanel("Home", 
                          plotOutput("plot1")
@@ -169,6 +219,7 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                 
                 
                 )
+      )
            
 ))
 
@@ -249,40 +300,14 @@ server <- function(input, output) {
       
       # pull the plot together
       p1 +p4+
-        plot_annotation(title = paste("There are",nrow(catdata), "adoptable cats in Los Angeles."),
+        plot_annotation(title = paste("There are",nrow(catdata), "adoptable cats at the LA Kitten Rescue."),
                         theme = theme(plot.title = element_text(size = 20)))
     })
     
-    output$plot2 <- renderPlot(width = 800, height = 800, {
+    output$plot2 <- renderPlot(width = 550, height = 550, {
      # set.seed(42)
-      catdata2 %>%
-        select(Name, colorgroup)%>%
-        group_by(Name, colorgroup) %>%
-        summarize(N = n()) %>%
-        mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)))%>%
-        ungroup()%>%
-        ggplot(aes(label = Name, size = N, angle = angle, color = colorgroup)) +
-        geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
-                                 rm_outside = FALSE, 
-                                 area_corr = TRUE) +
-        scale_size_area(max_size = 9) +
-        theme_minimal()+
-        ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
-        labs(subtitle = "Size of names proportional to frequency")+
-        theme(
-          plot.title = element_markdown(lineheight = 1.1, size = 20, hjust = 0.5),
-          plot.subtitle = element_markdown(hjust = 0.5, size  = 16),
-          panel.background = element_rect(fill = "#2B3E50", colour = "white",
-                                          size = 2, linetype = "solid"),
-          panel.grid.major = element_line(size = 0.5, linetype = 'solid',
-                                          colour = "#2B3E50"), 
-          panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
-                                          colour = "#2B3E50"),
-          plot.background = element_rect(fill = "#4E5D6C"),
-          text = element_text(colour = 'white'),
-          axis.text = element_text(colour = 'white'),
-          axis.ticks = element_line(colour = 'white')
-        )
+     p3
+        
     })
     
     

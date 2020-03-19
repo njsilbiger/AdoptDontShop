@@ -14,18 +14,27 @@ library(fuzzyjoin)
 library(ggtext)
 
 
+## https://adoptapet.com/pet-search?clan_id=2&geo_range=5&location=91423&page=1
+
 ### Use the adopt a pet website for los angeles
 startUrl<-"https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california"
+#startUrl<-"https://adoptapet.com/pet-search?clan_id=2&geo_range=5&"
 
+
+#Zip<-"91423"
+#location=91423&page=1
 # make a function to pull out all the data from the website and make a datafram
 getCats<-function(i) {
   cat(i, "\n")
-  url <- str_c(startUrl, "?page=", i)
+  #url <- str_c(startUrl,"location=",Zip,"&page=", i)
+  url <- str_c(startUrl,"?page=", i)
   
   # pull in the URL
 webpage <- read_html(url)
 
 b<-webpage %>%
+  #html_nodes("#container")%>%
+  #html_nodes("div")%>%
   html_nodes(".content") %>% # extract the data
   html_text(trim = TRUE)%>%
   data.frame() %>%
@@ -46,9 +55,6 @@ b<-b %>%
 b$Sex<-trimws(b$Sex)
 b$Breed<-trimws(b$Breed)
 b$Age<-trimws(b$Age)
-
-#reorder youngese to oldest
-b$Age<-factor(c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior"))
 
 ## Get the cat pictures
 pics<-webpage %>%
@@ -78,7 +84,9 @@ getCats_noerror <- possibly(getCats, otherwise = p)
 # extract the cat data
 catdata <- c(1:11) %>% # how many pages of data to look through
   map_dfr(getCats_noerror)%>% # stack the data on top of each other
-  drop_na(Breed)
+  drop_na(Breed)%>%
+  #reorder youngest to oldest
+  mutate(Age=factor(Age, c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior")))
 
 ## Make some plots
 # Cats by breed

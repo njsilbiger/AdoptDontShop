@@ -28,7 +28,7 @@ catdat <- read.csv('catsample.csv',header=T) %>%
                   Name = trimws(Name,which="both"))
 
 # Harry Potter ------------------------------------------------------------
-harry <-read.csv('HPnames.csv',header=T)
+harry <-read.csv('HPnames_2.csv',header=T)
 
 is_it_HP <- function(Name){
   x <- data.frame(Name = Name)

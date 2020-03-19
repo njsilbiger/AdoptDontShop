@@ -148,16 +148,16 @@ img<-"https://toppng.com/uploads/preview/cat-silhouette-1154945485050bazz8zvk.pn
 ui <- fluidPage(theme = shinytheme("superhero"),
 
     # Application title
-    titlePanel("Adopt, Don't Shop"),
-
-       sidebarLayout(
-           sidebarPanel(
-               # Button to generate new kitkats
-               actionButton("go", "Show me da kitties!", icon("heart", lib = "glyphicon","fa-2x"),
-                            style="color: #fff; background-color: #f46d43; border-color: #f46d43")
-           ),
+    titlePanel(""),
+   
            
-       mainPanel(
+       mainPanel(h1("Adopt, Don't Shop", align = "center"),
+                   h6("Real time data of adoptable cats in Los Angeles", align = "center"),
+                   h6(align = "center", "All data from", tags$a(href="https://adoptapet.com/", "adoptapet.com")),
+      
+      actionButton("go", "Show me da kitties!", icon("heart", lib = "glyphicon","fa-2x"),
+                              style="color: #fff; background-color: #f46d43; border-color: #f46d43", align = "center"),
+        h1(" "),         
             tabsetPanel(
                 tabPanel("Home", 
                          plotOutput("plot1")
@@ -166,7 +166,7 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                          plotOutput("plot2")
                          )
                 )
-)))
+))
 
 
 # server logic ------------------------------------------------------------
@@ -261,7 +261,7 @@ server <- function(input, output) {
         geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
                                  rm_outside = FALSE, 
                                  area_corr = TRUE) +
-        scale_size_area(max_size = 7) +
+        scale_size_area(max_size = 9) +
         theme_minimal()+
         ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
         labs(subtitle = "Size of names proportional to frequency")+

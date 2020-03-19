@@ -65,9 +65,16 @@ b<-bind_cols(b,pics)
 return(b)
 }
 
+# if the page has no data on it this will fill it with NA instead of giving us an error.
+p<-as.data.frame(x = matrix(NA,nrow = 1, ncol = 6))
+colnames(p)<-c('Name','Sex','Age', 'Breed', 'Needs', 'src')
+
+getCats_noerror <- possibly(getCats, otherwise = p)
+
 # extract the cat data
 catdata <- c(1:11) %>% # how many pages of data to look through
-  map_dfr(getCats) # stack the data on top of each other
+  map_dfr(getCats_noerror)%>% # stack the data on top of each other
+  drop_na(Breed)
 
 ## Make some plots
 # Cats by breed

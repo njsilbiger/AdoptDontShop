@@ -9,6 +9,10 @@ library(cowplot)
 library(ggsci)
 library(ggwordcloud)
 library(RCurl)
+library(NutrienTrackeR)
+library(fuzzyjoin)
+library(ggtext)
+
 
 ### Use the adopt a pet website for los angeles
 startUrl<-"https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california"
@@ -136,21 +140,99 @@ p4<-ggdraw() +
 
   write.csv(catdata, file = 'catdata.csv')
   
-  ### Make a wordcloud with the name data
+  #####################
+  ### Make a wordcloud with the name data and match it with food, disney, and Harry Potter characters
+  
+  ## extract Disney Characters
+  url<-"https://en.wikipedia.org/wiki/List_of_Disney_animated_universe_characters"
+  
+  # pull in the URL
+  webpage <- read_html(url)
+  
+  disney<-webpage %>%
+    html_nodes("tr > :nth-child(1)") %>% # extract the data
+    html_text(trim = TRUE)%>%
+    data.frame() %>%
+    slice(-c(1:3)) %>%
+    slice(-c(1008:1022))%>%
+    rename("Character" = ".")
+  
+  # Harry Potter ------------------------------------------------------------
+  harry <-read.csv('HPnames_2.csv',header=T)
+  
+  # create a function looking for food names
+  is_it_food <- function(catname){
+    in_database <- findFoodName(catname,
+                                food_database = "USDA",
+                                food_group = NULL,
+                                ignore_case = TRUE) != "Could not find any food with the current keywords"
+    val <- in_database[1]
+    r <- unname(ifelse(val,1,0))
+    firstnamed <- if(in_database[1]){findFoodName(catname,
+                                                  food_database = "USDA",
+                                                  food_group = NULL,
+                                                  ignore_case = TRUE)[1]} else(NA)
+    return(list(tf = r,firstnamed = firstnamed))
+  }
+  
+  # create functioning using fuzzy logic to look for disney names
+  is_it_HP <- function(Name){
+    x <- data.frame(Name = Name)
+    y <- x %>% regex_left_join(harry,by=c(Name = "Character_regex"))
+    result <- ifelse(any(!is.na(y$Character)),1,0)
+    return(result)
+  }
+  
+  # Put together and make a dataframe ---------------------------------------
+  
+  catdata2 <- catdata %>% 
+    select(Name,Sex,Age) %>%
+    mutate(Name = as.character(Name),
+           Name = trimws(Name,which="both")) %>%
+    group_by(Name) %>%
+    mutate(Food = is_it_food(Name)$tf,
+           FirstMatchedFood = is_it_food(Name)$firstnamed,
+           Disney = ifelse(Name %in% disney$Character,1,0),
+           Harry = is_it_HP(Name))%>%
+    ungroup()%>%
+    mutate(colorgroup = case_when(Harry == 1 ~ "Harry",
+                                  Disney == 1 ~ "Disney",
+                                  Food == 1 ~ "Food",
+                                  TRUE ~ "Other"))%>%
+    mutate(colorgroup = as.factor(colorgroup)) 
+  
+ ### Make a workd cloud 
+  # Cat sillhouette 
   img<-"https://toppng.com/uploads/preview/cat-silhouette-1154945485050bazz8zvk.png"
   
   set.seed(42)
-  catdata %>%
-    select(Name)%>%
-    group_by(Name) %>%
+  catdata2 %>%
+    select(Name, colorgroup)%>%
+    group_by(Name, colorgroup) %>%
     summarize(N = n()) %>%
     mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)))%>%
-    ggplot(aes(label = Name, size = N, angle = angle)) +
+    ungroup()%>%
+    ggplot(aes(label = Name, size = N, angle = angle, color = colorgroup)) +
     geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
                              rm_outside = FALSE, 
                              area_corr = TRUE) +
     scale_size_area(max_size = 5) +
     theme_minimal()+
+    ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
+    labs(subtitle = "Size of names proportional to frequency")+
+    theme(
+      plot.title = element_markdown(lineheight = 1.1, size = 15, hjust = 0.5),
+      panel.background = element_rect(fill = "#2B3E50", colour = "white",
+                                      size = 2, linetype = "solid"),
+      panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                      colour = "#2B3E50"), 
+      panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                      colour = "#2B3E50"),
+      plot.background = element_rect(fill = "#4E5D6C"),
+      text = element_text(colour = 'white'),
+      axis.text = element_text(colour = 'white'),
+      axis.ticks = element_line(colour = 'white')
+    )+
     ggsave("Catcloud.png", height = 6, width = 6)
   
   

@@ -150,10 +150,11 @@ ui <- fluidPage(theme = shinytheme("superhero"),
     # Application title
     titlePanel(""),
    
-           
-       mainPanel(h1("Adopt, Don't Shop", align = "center"),
+      mainPanel(h1("Adopt, Don't Shop", align = "center"),
                    h6("Real time data of adoptable cats in Los Angeles", align = "center"),
-                   h6(align = "center", "All data from", tags$a(href="https://adoptapet.com/", "adoptapet.com")),
+                   h6(align = "center", "All data from", tags$a(href="https://adoptapet.com/", "adoptapet.com"),
+                   h6("Shiny app by Nyssa Silbiger and Megsie Siple", align = "center")
+                   ),
       
       actionButton("go", "Show me da kitties!", icon("heart", lib = "glyphicon","fa-2x"),
                               style="color: #fff; background-color: #f46d43; border-color: #f46d43", align = "center"),
@@ -165,7 +166,10 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                 tabPanel("Names",
                          plotOutput("plot2")
                          )
+                
+                
                 )
+           
 ))
 
 

@@ -239,6 +239,7 @@ p4<-ggdraw() +
     labs(subtitle = "Size of names proportional to frequency")+
     theme(
       plot.title = element_markdown(lineheight = 1.1, size = 15, hjust = 0.5),
+      plot.subtitle = element_markdown(hjust = 0.5),
       panel.background = element_rect(fill = "#2B3E50", colour = "white",
                                       size = 2, linetype = "solid"),
       panel.grid.major = element_line(size = 0.5, linetype = 'solid',

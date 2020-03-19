@@ -2,6 +2,7 @@
 library(tidyverse)
 library(rvest)
 library(NutrienTrackeR)
+library(fuzzyjoin)
 
 # Food --------------------------------------------------------------------
 
@@ -21,41 +22,21 @@ is_it_food <- function(catname){
   return(list(tf = r,firstnamed = firstnamed))
 }
 
-##is it HP
-is_it_HP <- function(catname){
-  in_database <- str_detect(HP$Character, regex(catname, ignore_case = TRUE))
-  
-  val <- in_database[1]
-  r <- unname(ifelse(val,1,0))
-  firstnamed <- if(in_database[1]){HP$Character} else(NA)
-  return(list(tf = r,firstnamed = firstnamed))
+# Sample of cat names -----------------------------------------------------
+catdat <- read.csv('catsample.csv',header=T) %>%
+          mutate(Name = as.character(Name),
+                  Name = trimws(Name,which="both"))
+
+# Harry Potter ------------------------------------------------------------
+harry <-read.csv('HPnames.csv',header=T)
+
+is_it_HP <- function(Name){
+  x <- data.frame(Name = Name)
+  y <- x %>% regex_left_join(harry,by=c(Name = "Character_regex"))
+  result <- ifelse(any(!is.na(y$Character)),1,0)
+  return(result)
 }
-
-str_detect(as.character(catdata$Name), regex(as.character(HP$Character[1]), ignore_case = TRUE))
-
-
-is_it_HP<-function(HPName){
-  in_database<- str_detect(as.character(catdata$Name), regex(HPName, ignore_case = TRUE))
-  val <- in_database[1]
-  r <- unname(ifelse(val,1,0))
-  return(r)
   
-  }
-
-catdat$Name %in% regex(HP$First, ignore_case = TRUE)
-
-# see if any of the HP names match up regarless of case
-test<-sapply(HP$Character, function (y) sapply(catdata$Name, function (x) grepl(y, x, fixed = FALSE, ignore.case = TRUE))) %>%
-  as_tibble()%>%
-  mutate(yes = sum(V1:V325))
-
-vowel_counts <- tibble(words = as.character(catdat$Name), 
-                       n_string = str_length(as.character(catdat$Name)),
-                       n_vowel = str_count(str_length(as.character(catdat$Name)), as.character(HP$Character)),
-                       prop_vowel = n_vowel / n_string)
-
-# is_it_food("Pumpkin")
-is_it_HP("Harry")
 # Disney ------------------------------------------------------------------
 
 url<-"https://en.wikipedia.org/wiki/List_of_Disney_animated_universe_characters"
@@ -104,15 +85,4 @@ t2 <- catdat %>%
   mutate(Food = is_it_food(Name)$tf,
          FirstMatchedFood = is_it_food(Name)$firstnamed,
          Disney = ifelse(Name %in% disney$Character,1,0),
-         HarryPotter_lastname =ifelse(Name %in% regex(HP$Last, ignore_case = TRUE),1,0),
-         HarryPotter_firstname =ifelse(Name %in% regex(HP$Fist, ignore_case = TRUE),1,0))
-#t2
-
-str_detect(HP$Character, stringr::fixed(catdat$Name, ignore_case = TRUE))
-
-str_detect("Mr Weesley", regex("Weesley", ignore_case = TRUE))
-
-str_detect(as.character(catdata$Name)%in% regex(HP$Last, ignore_case = TRUE))
-
-
-str_detect(HP$Character,  regex("Weesley", ignore_case = TRUE))
+          Harry = is_it_HP(Name))

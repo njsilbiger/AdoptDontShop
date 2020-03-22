@@ -20,7 +20,7 @@ library(DT)
 library(shinycssloaders)
 
 # Load stuff here ---------------------------------------------------------
-### Use the adopt a pet website for los angeles
+## for the word cloud
 startUrl<-"https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california"
 
 # make a function to pull out all the data from the website and make a datafram
@@ -78,14 +78,7 @@ colnames(p)<-c('Name','Sex','Age', 'Breed', 'Needs', 'src')
 
 getCats_noerror <- possibly(getCats, otherwise = p)
 
-# extract the cat data
-catdata <- c(1:11) %>% # how many pages of data to look through
-  map_dfr(getCats_noerror)%>% # stack the data on top of each other
-  drop_na(Breed)%>%
-  #reorder youngest to oldest
-  mutate(Age=factor(Age, c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior")))
 
-## for the word cloud
 ## extract Disney Characters
 url<-"https://en.wikipedia.org/wiki/List_of_Disney_animated_universe_characters"
 
@@ -128,52 +121,9 @@ is_it_HP <- function(Name){
 
 # Put together and make a dataframe ---------------------------------------
 
-catdata2 <- catdata %>% 
-  select(Name,Sex,Age) %>%
-  mutate(Name = as.character(Name),
-         Name = trimws(Name,which="both")) %>%
-  group_by(Name) %>%
-  mutate(Food = is_it_food(Name)$tf,
-         FirstMatchedFood = is_it_food(Name)$firstnamed,
-         Disney = ifelse(Name %in% disney$Character,1,0),
-         Harry = is_it_HP(Name))%>%
-  ungroup()%>%
-  mutate(colorgroup = case_when(Harry == 1 ~ "Harry",
-                                Disney == 1 ~ "Disney",
-                                Food == 1 ~ "Food",
-                                TRUE ~ "Other"))%>%
-  mutate(colorgroup = as.factor(colorgroup)) 
 # Cat sillhouette 
 img<-"https://toppng.com/uploads/preview/cat-silhouette-1154945485050bazz8zvk.png"
 
-## cat cloud
-p3<- catdata2 %>%
-  select(Name, colorgroup)%>%
-  group_by(Name, colorgroup) %>%
-  summarize(N = n()) %>%
-  mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)))%>%
-  ungroup()%>%
-  ggplot(aes(label = Name, size = N, angle = angle, color = colorgroup)) +
-  geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
-                           rm_outside = FALSE, 
-                           area_corr = TRUE) +
-  scale_size_area(max_size = 6) +
-  theme_minimal()+
-  ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
-  labs(subtitle = "Size of names proportional to frequency")+
-  theme(
-    plot.title = element_markdown(lineheight = 1.1, size = 20, hjust = 0.5),
-    plot.subtitle = element_markdown(hjust = 0.5, size  = 16),
-    panel.background = element_rect(fill = "#2B3E50", colour = "white",
-                                    size = 2, linetype = "solid"),
-    panel.grid.major = element_line(size = 0.5, linetype = 'solid',
-                                    colour = "#2B3E50"), 
-    panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
-                                    colour = "#2B3E50"),
-    plot.background = element_rect(fill = "#4E5D6C"),
-    text = element_text(colour = 'white'),
-    axis.text = element_text(colour = 'white'),
-    axis.ticks = element_line(colour = 'white'))
 
 # ui ----------------------------------------------------------------------
 ui <- fluidPage(theme = shinytheme("superhero"),
@@ -186,8 +136,8 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                    h6("Real time data of adoptable cats at the Los Angeles Kitten Rescue", align = "center"),
                    h6(align = "center", "All data from", tags$a(href="https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california", "adoptapet.com")),
                       
-                   div( actionButton("go", "Show me da kitties!", icon("heart", lib = "glyphicon","fa-2x"),
-                                style="color: #fff; background-color: #f46d43; border-color: #f46d43", align = "center"), style="text-align: center;"),
+                 #  div( actionButton("go", "Show me da kitties!", icon("heart", lib = "glyphicon","fa-2x"),
+                  #              style="color: #fff; background-color: #f46d43; border-color: #f46d43", align = "center"), style="text-align: center;"),
                    
                    # display relevent pet information ####
                    br(), br(),
@@ -210,11 +160,47 @@ ui <- fluidPage(theme = shinytheme("superhero"),
       
            #h1(" "),         
             tabsetPanel(
-                tabPanel("Home", 
+                tabPanel("Cat Data", 
+                         em("Please be patient while data are loading."),
                          plotOutput("plot1")
+                        
                          ), 
-                tabPanel("Names",
-                         plotOutput("plot2")
+                tabPanel("Cat Tinder - Find your match!",
+                         h1(),
+                         column(2,align="center",
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                div( actionButton("go", HTML("Not interested.<br/>
+                                                  Show me a new kitty!"), icon("heart", lib = "glyphicon","fa-2x"),
+                                                  style="color: #fff; 
+                                                        background-color: #f46d43; 
+                                                        border-color: #f46d43;
+                                                        vertical-align- middle;",
+                                                  align = "center"), style="text-align: center;"),
+                                
+                                br()),
+                         column(7,align="center",
+                         plotOutput("plot2")),
+                         br(),
+                         column(2,align="center",
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                div( actionButton("go1","I want to adopt!", icon("heart", lib = "glyphicon","fa-2x"),
+                                                  style="color: #fff; 
+                                                  background-color: #f46d43; 
+                                                  border-color: #f46d43;",
+                                                  
+                                                  align = "center"), style="text-align: center; vertical-align- middle;"),
+                                
+                                br())
                          )
                 
                 
@@ -228,13 +214,22 @@ ui <- fluidPage(theme = shinytheme("superhero"),
 
 server <- function(input, output) {
 
+  
+  catdatainfo<-reactive({### Use the adopt a pet website for los angeles
+    # extract the cat data
+    catdata <- c(1:11) %>% # how many pages of data to look through
+      map_dfr(getCats_noerror)%>% # stack the data on top of each other
+      drop_na(Breed)%>%
+      #reorder youngest to oldest
+      mutate(Age=factor(Age, c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior"))); catdata})
+  
   catnum <- eventReactive(input$go, {
     ## Pick a random cat to view
-    sample(nrow(catdata),1,replace=T)
+    sample(nrow(catdatainfo()),1,replace=T)
   })
   
-    output$plot1 <- renderPlot(width = 800, height = 500,{
-      p1<-catdata %>%
+    output$plot1 <- renderPlot(width = 1200, height = 500,{
+      p1<-catdatainfo() %>%
         filter(Breed !="")%>%
         count(Breed, Age, Sex)%>%
         mutate(n = as.numeric(n))%>%
@@ -269,20 +264,72 @@ server <- function(input, output) {
         ) +
         facet_wrap(~Sex, nrow = 2)
       
+      # set.seed(42)
+      catdata2 <- catdatainfo() %>% 
+        select(Name,Sex,Age) %>%
+        mutate(Name = as.character(Name),
+               Name = trimws(Name,which="both")) %>%
+        group_by(Name) %>%
+        mutate(Food = is_it_food(Name)$tf,
+               FirstMatchedFood = is_it_food(Name)$firstnamed,
+               Disney = ifelse(Name %in% disney$Character,1,0),
+               Harry = is_it_HP(Name))%>%
+        ungroup()%>%
+        mutate(colorgroup = case_when(Harry == 1 ~ "Harry",
+                                      Disney == 1 ~ "Disney",
+                                      Food == 1 ~ "Food",
+                                      TRUE ~ "Other"))%>%
+        mutate(colorgroup = as.factor(colorgroup)) 
       
+      ## cat cloud
+      p4<-catdata2 %>%
+        select(Name, colorgroup)%>%
+        group_by(Name, colorgroup) %>%
+        summarize(N = n()) %>%
+        mutate(angle = 45 * sample(-2:2, n(), replace = TRUE, prob = c(1, 1, 4, 1, 1)))%>%
+        ungroup()%>%
+        ggplot(aes(label = Name, size = N, angle = angle, color = colorgroup)) +
+        geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
+                                 rm_outside = FALSE, 
+                                 area_corr = TRUE) +
+        scale_size_area(max_size = 3) +
+        theme_minimal()+
+        ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
+        labs(subtitle = "Size of names proportional to frequency")+
+        theme(
+          plot.title = element_markdown(lineheight = 1.1, size = 20, hjust = 0.5),
+          plot.subtitle = element_markdown(hjust = 0.5, size  = 16),
+          panel.background = element_rect(fill = "#2B3E50", colour = "white",
+                                          size = 2, linetype = "solid"),
+          panel.grid.major = element_line(size = 0.5, linetype = 'solid',
+                                          colour = "#2B3E50"), 
+          panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                          colour = "#2B3E50"),
+          plot.background = element_rect(fill = "#4E5D6C"),
+          text = element_text(colour = 'white'),
+          axis.text = element_text(colour = 'white'),
+          axis.ticks = element_line(colour = 'white'))
+      
+      # pull the plot together
+      p1 +p4+
+        plot_annotation(title = paste("There are",nrow(catdatainfo()), "adoptable cats at the LA Kitten Rescue."),
+                        theme = theme(plot.title = element_text(size = 20)))
+    })
+    
+    output$plot2 <- renderPlot(width = 550, height = 550, {
       # random cat to view
       # give its info
-      Name<-catdata$Name[catnum()]
-      Breed<-catdata$Breed[catnum()]
-      Age<-catdata$Age[catnum()]
-      Sex<-catdata$Sex[catnum()]
+      Name<-catdatainfo()$Name[catnum()]
+      Breed<-catdatainfo()$Breed[catnum()]
+      Age<-catdatainfo()$Age[catnum()]
+      Sex<-catdatainfo()$Sex[catnum()]
       
       # write a statement
       cat.info<-glue('My name is {Name}.\n I am a {Sex} {Breed} ({Age}).\n You can adopt me at adoptapet.com')
       
       # put a cat on it
-      p4<-ggdraw() +
-        draw_image(as.character(catdata$src[catnum()]))+
+      ggdraw() +
+        draw_image(as.character(catdatainfo()$src[catnum()]))+
         ggtitle('Random adoptable cat')+
         labs(subtitle  = cat.info)+
         theme_minimal()+
@@ -298,15 +345,10 @@ server <- function(input, output) {
               text = element_text(colour = 'white')
         )#2B3E50
       
-      # pull the plot together
-      p1 +p4+
-        plot_annotation(title = paste("There are",nrow(catdata), "adoptable cats at the LA Kitten Rescue."),
-                        theme = theme(plot.title = element_text(size = 20)))
-    })
-    
-    output$plot2 <- renderPlot(width = 550, height = 550, {
-     # set.seed(42)
-     p3
+      
+      
+      
+      
         
     })
     

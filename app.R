@@ -140,7 +140,7 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                   #              style="color: #fff; background-color: #f46d43; border-color: #f46d43", align = "center"), style="text-align: center;"),
                    
                    # display relevent pet information ####
-                   br(), br(),
+              #     br(), br(),
                    hr(), 
                    div(img(src = "https://pbs.twimg.com/media/DaETc1IVMAA_ckr?format=jpg&name=large", height = "200px"), style="text-align: center;"),
                    #img(src = "https://pbs.twimg.com/media/DaETc1IVMAA_ckr?format=jpg&name=large", height = "150px", align = "center"),
@@ -156,7 +156,7 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                    h6("Made by Nyssa Silbiger and Megsie Siple")
       ) ,
       
-      mainPanel(with = 10,
+      mainPanel(with = 14,
       
            #h1(" "),         
             tabsetPanel(
@@ -165,26 +165,14 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                          plotOutput("plot1")
                         
                          ), 
+                tabPanel("Cat Names", 
+                         em("Please be patient while data are loading."),
+                         plotOutput("plot3")
+                         
+                ), 
+                
                 tabPanel("Cat Tinder - Find your match!",
-                         h1(),
-                         column(2,align="center",
-                                br(),
-                                br(),
-                                br(),
-                                br(),
-                                br(),
-                                br(),
-                                div( actionButton("go", HTML("Not interested.<br/>
-                                                  Show me a new kitty!"), icon("heart", lib = "glyphicon","fa-2x"),
-                                                  style="color: #fff; 
-                                                        background-color: #f46d43; 
-                                                        border-color: #f46d43;
-                                                        vertical-align- middle;",
-                                                  align = "center"), style="text-align: center;"),
-                                
-                                br()),
-                         column(7,align="center",
-                         plotOutput("plot2")),
+                         em("Please be patient while data are loading."),
                          br(),
                          column(2,align="center",
                                 br(),
@@ -193,11 +181,30 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                                 br(),
                                 br(),
                                 br(),
-                                div( actionButton("go1","I want to adopt!", icon("heart", lib = "glyphicon","fa-2x"),
+                                div( actionButton("go", HTML("Not interested.<br/>
+                                                  Show me a new kitty!"),
+                                                  style="color: #fff; 
+                                                        background-color: #f46d43; 
+                                                        border-color: #f46d43;
+                                                        vertical-align- middle;",
+                                                  align = "center"), style="text-align: center;"),
+                                
+                                br()),
+                         column(8,align="center",
+                         plotOutput("plot2")),
+                         br(),
+                         column(2,align="left",
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                br(),
+                                div( actionButton(label = "I want to adopt!", icon("heart", lib = "glyphicon","fa-2x"),
                                                   style="color: #fff; 
                                                   background-color: #f46d43; 
                                                   border-color: #f46d43;",
-                                                  
+                                                  onclick ="window.open('https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california', '_blank')",
                                                   align = "center"), style="text-align: center; vertical-align- middle;"),
                                 
                                 br())
@@ -228,7 +235,7 @@ server <- function(input, output) {
     sample(nrow(catdatainfo()),1,replace=T)
   })
   
-    output$plot1 <- renderPlot(width = 1200, height = 500,{
+    output$plot1 <- renderPlot(width = 550, height = 550,{
       p1<-catdatainfo() %>%
         filter(Breed !="")%>%
         count(Breed, Age, Sex)%>%
@@ -264,6 +271,13 @@ server <- function(input, output) {
         ) +
         facet_wrap(~Sex, nrow = 2)
       
+      # pull the plot together
+      p1 +
+        plot_annotation(title = paste("There are",nrow(catdatainfo()), "adoptable cats at the LA Kitten Rescue."),
+                        theme = theme(plot.title = element_text(size = 20)))
+    })
+    
+    output$plot3 <- renderPlot(width = 550, height = 550,{
       # set.seed(42)
       catdata2 <- catdatainfo() %>% 
         select(Name,Sex,Age) %>%
@@ -282,7 +296,7 @@ server <- function(input, output) {
         mutate(colorgroup = as.factor(colorgroup)) 
       
       ## cat cloud
-      p4<-catdata2 %>%
+      catdata2 %>%
         select(Name, colorgroup)%>%
         group_by(Name, colorgroup) %>%
         summarize(N = n()) %>%
@@ -292,7 +306,7 @@ server <- function(input, output) {
         geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
                                  rm_outside = FALSE, 
                                  area_corr = TRUE) +
-        scale_size_area(max_size = 3) +
+        scale_size_area(max_size = 6) +
         theme_minimal()+
         ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
         labs(subtitle = "Size of names proportional to frequency")+
@@ -310,27 +324,27 @@ server <- function(input, output) {
           axis.text = element_text(colour = 'white'),
           axis.ticks = element_line(colour = 'white'))
       
-      # pull the plot together
-      p1 +p4+
-        plot_annotation(title = paste("There are",nrow(catdatainfo()), "adoptable cats at the LA Kitten Rescue."),
-                        theme = theme(plot.title = element_text(size = 20)))
+      
     })
     
-    output$plot2 <- renderPlot(width = 550, height = 550, {
+    output$plot2 <- renderPlot(width = 400, height = 400, {
       # random cat to view
       # give its info
-      Name<-catdatainfo()$Name[catnum()]
-      Breed<-catdatainfo()$Breed[catnum()]
-      Age<-catdatainfo()$Age[catnum()]
-      Sex<-catdatainfo()$Sex[catnum()]
+      
+      num<-if(input$go == 0) 1 else catnum()
+      
+      Name<-catdatainfo()$Name[num]
+      Breed<-catdatainfo()$Breed[num]
+      Age<-catdatainfo()$Age[num]
+      Sex<-catdatainfo()$Sex[num]
       
       # write a statement
       cat.info<-glue('My name is {Name}.\n I am a {Sex} {Breed} ({Age}).\n You can adopt me at adoptapet.com')
       
       # put a cat on it
       ggdraw() +
-        draw_image(as.character(catdatainfo()$src[catnum()]))+
-        ggtitle('Random adoptable cat')+
+        draw_image(as.character(catdatainfo()$src[num]))+
+        #ggtitle('Random adoptable cat')+
         labs(subtitle  = cat.info)+
         theme_minimal()+
         theme(plot.title = element_markdown(size = 16, hjust = 0.5),

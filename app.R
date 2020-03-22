@@ -181,7 +181,7 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                                 br(),
                                 br(),
                                 br(),
-                                div( actionButton("go", HTML("Not interested.<br/>
+                                div( actionButton("go", HTML("More!<br/>
                                                   Show me a new kitty!"),
                                                   style="color: #fff; 
                                                         background-color: #f46d43; 
@@ -230,6 +230,23 @@ server <- function(input, output) {
       #reorder youngest to oldest
       mutate(Age=factor(Age, c("Adult", "Kitten", "Senior", "Young"), levels = c("Kitten", "Young", "Adult", "Senior"))); catdata})
   
+  catdata2<-reactive({catdata2 <- catdatainfo() %>% 
+    select(Name,Sex,Age) %>%
+    mutate(Name = as.character(Name),
+           Name = trimws(Name,which="both")) %>%
+    group_by(Name) %>%
+    mutate(Food = is_it_food(Name)$tf,
+           FirstMatchedFood = is_it_food(Name)$firstnamed,
+           Disney = ifelse(Name %in% disney$Character,1,0),
+           Harry = is_it_HP(Name))%>%
+    ungroup()%>%
+    mutate(colorgroup = case_when(Harry == 1 ~ "Harry",
+                                  Disney == 1 ~ "Disney",
+                                  Food == 1 ~ "Food",
+                                  TRUE ~ "Other"))%>%
+    mutate(colorgroup = as.factor(colorgroup));catdata2 })
+  
+  
   catnum <- eventReactive(input$go, {
     ## Pick a random cat to view
     sample(nrow(catdatainfo()),1,replace=T)
@@ -249,7 +266,7 @@ server <- function(input, output) {
         # scale_fill_uchicago()+
         scale_fill_tron()+
         theme_classic()+
-        theme(axis.text.x = element_text(angle = 90, size = 10, vjust = 0.5, hjust = 1),
+        theme(axis.text.x = element_text(angle = 45, size = 10, hjust = 1),
               axis.title = element_text(size = 14),
               plot.title = element_text(size = 20, hjust = 0.5, colour = "white"),
               plot.subtitle = element_markdown(hjust = 0.5, size = 16),
@@ -279,24 +296,9 @@ server <- function(input, output) {
     
     output$plot3 <- renderPlot(width = 550, height = 550,{
       # set.seed(42)
-      catdata2 <- catdatainfo() %>% 
-        select(Name,Sex,Age) %>%
-        mutate(Name = as.character(Name),
-               Name = trimws(Name,which="both")) %>%
-        group_by(Name) %>%
-        mutate(Food = is_it_food(Name)$tf,
-               FirstMatchedFood = is_it_food(Name)$firstnamed,
-               Disney = ifelse(Name %in% disney$Character,1,0),
-               Harry = is_it_HP(Name))%>%
-        ungroup()%>%
-        mutate(colorgroup = case_when(Harry == 1 ~ "Harry",
-                                      Disney == 1 ~ "Disney",
-                                      Food == 1 ~ "Food",
-                                      TRUE ~ "Other"))%>%
-        mutate(colorgroup = as.factor(colorgroup)) 
       
       ## cat cloud
-      catdata2 %>%
+      catdata2() %>%
         select(Name, colorgroup)%>%
         group_by(Name, colorgroup) %>%
         summarize(N = n()) %>%

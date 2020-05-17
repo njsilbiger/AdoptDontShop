@@ -18,6 +18,7 @@ library(sparkline)
 library(timevis)
 library(DT)
 library(shinycssloaders)
+library(shinyjs)
 
 # Load stuff here ---------------------------------------------------------
 ## for the word cloud
@@ -61,6 +62,25 @@ getCats<-function(i) {
     filter(is.na(class))%>%
     #slice(-c(nrow(.)-20:nrow(.))) %>%
     select(src)
+  
+  # get clickable links
+  ClickLinks<-webpage %>%
+    html_nodes("a, .content")%>% # extract the data
+    html_attr(., "href") %>%
+    data.frame()%>%
+    rename("ID" = ".")%>%
+    mutate(ID = as.character(ID))%>%
+    drop_na(ID)
+  
+  
+  keep<-str_detect(ClickLinks$ID,"fromShelter=1")### find any row that does not end with Shleter=1
+  ClickLinks<-ClickLinks[keep,] %>%
+    data.frame()%>%
+    rename("ID" = ".")%>%
+    mutate(ID = as.character((ID)))
+  
+  pics<-bind_cols(pics,ClickLinks)
+  
   
   # add empty rows of NAs to pics if there is a missing picture
   # This will cause some of the pictures to mis match... there is no easy way to join correctly.. :(
@@ -127,6 +147,7 @@ img<-"https://toppng.com/uploads/preview/cat-silhouette-1154945485050bazz8zvk.pn
 
 # ui ----------------------------------------------------------------------
 ui <- fluidPage(theme = shinytheme("superhero"),
+                useShinyjs(),
 
     # Application title
     titlePanel("Adopt Don't Shop"),
@@ -200,11 +221,11 @@ ui <- fluidPage(theme = shinytheme("superhero"),
                                 br(),
                                 br(),
                                 br(),
-                                div( actionButton(label = "I want to adopt!", icon("heart", lib = "glyphicon","fa-2x"),
+                                div( actionButton("btn",label = "I want to adopt!", icon("heart", lib = "glyphicon","fa-2x"),
                                                   style="color: #fff; 
                                                   background-color: #f46d43; 
                                                   border-color: #f46d43;",
-                                                  onclick ="window.open('https://www.adoptapet.com/adoption_rescue/4223-kitten-rescue-los-angeles-california', '_blank')",
+                                             #    onclick ="window.open('https://adoptapet.com/pet/28029565-Los Angeles-CA?fromShelter=1', '_blank')",
                                                   align = "center"), style="text-align: center; vertical-align- middle;"),
                                 
                                 br())
@@ -251,6 +272,15 @@ server <- function(input, output) {
     ## Pick a random cat to view
     sample(nrow(catdatainfo()),1,replace=T)
   })
+  
+  # open cat specific link when clicking the adopt me button
+ 
+observeEvent(input$btn,{
+   num<-if(input$go == 0) 1 else catnum()
+    link<-catdatainfo()$ID[num]
+    onclick("btn", runjs(sprintf("window.open('%s')", link)))
+    })
+
   
     output$plot1 <- renderPlot(width = 550, height = 550,{
       p1<-catdatainfo() %>%
@@ -308,7 +338,7 @@ server <- function(input, output) {
         geom_text_wordcloud_area(mask = png::readPNG(getURLContent(img)),
                                  rm_outside = FALSE, 
                                  area_corr = TRUE) +
-        scale_size_area(max_size = 6) +
+        scale_size_area(max_size = (1/nrow(catdatainfo()))*850) +
         theme_minimal()+
         ggtitle("Cat names that are <span style = 'color:#7CAE00;'>food</span>, <span style = 'color:#00BFC4;'>Harry Potter</span>, and <span style = 'color:#F8766D;'>Disney Characters</span>")+
         labs(subtitle = "Size of names proportional to frequency")+
